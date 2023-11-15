@@ -17,7 +17,6 @@ void setup() {
   M5.Lcd.fillScreen(kBackgroundColor);
   M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
   M5.Lcd.setTextSize(kTextSize);
-  M5.Lcd.setCursor(100, 120);
 
   // Initialize I2C
   M5.Axp.setBoostBusOutEn(true);
@@ -59,7 +58,8 @@ void loop() {
   // floating point conversion according to datasheet
   auto co2 = (float)((uint16_t)data[0] << 8 | data[1]);
   // convert T in degC
-  auto temperature = -45 + 175 * (float)((uint16_t)data[3] << 8 | data[4]) / 65536;
+  auto temperature =
+      -45 + 175 * (float)((uint16_t)data[3] << 8 | data[4]) / 65536;
   // convert RH in %
   auto humidity = 100 * (float)((uint16_t)data[6] << 8 | data[7]) / 65536;
 
@@ -72,4 +72,3 @@ void loop() {
 
   delay(kIntervalTimeMilliSec);
 }
-
