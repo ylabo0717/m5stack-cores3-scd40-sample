@@ -2,6 +2,8 @@
 #include <M5CoreS3.h>
 #include <Wire.h>
 
+#include <cmath>
+
 // Consts
 const int16_t kScdAddress = 0x62;
 const uint32_t kInitialTimeMilliSec = 1000;
@@ -61,14 +63,20 @@ void loop() {
   auto temperature =
       -45 + 175 * (float)((uint16_t)data[3] << 8 | data[4]) / 65536;
   // convert RH in %
-  auto humidity = 100 * (float)((uint16_t)data[6] << 8 | data[7]) / 65536;
+  auto relative_humidity = (float)((uint16_t)data[6] << 8 | data[7]) / 65536;
 
+  auto e = 6.1078 * std::pow(10, (7.5 * temperature / (temperature + 237.3)));
+  auto a = (217 * e) / (temperature + 273.15);
+  auto absolute_humidity = a * relative_humidity;
+
+  M5.Lcd.setCursor(10, 80);
+  M5.Lcd.printf("CO2[ppm]       : %.1f\n", co2);
   M5.Lcd.setCursor(10, 100);
-  M5.Lcd.printf("CO2 : %.2f\n", co2);
+  M5.Lcd.printf("Temperature[C] : %.1f\n", temperature);
   M5.Lcd.setCursor(10, 120);
-  M5.Lcd.printf("Temperature : %.2f\n", temperature);
+  M5.Lcd.printf("RH[%%]          : %.1f\n", relative_humidity * 100);
   M5.Lcd.setCursor(10, 140);
-  M5.Lcd.printf("Humidity : %.2f\n", humidity);
+  M5.Lcd.printf("AH[g/m^3]      : %.1f\n", absolute_humidity);
 
   delay(kIntervalTimeMilliSec);
 }
