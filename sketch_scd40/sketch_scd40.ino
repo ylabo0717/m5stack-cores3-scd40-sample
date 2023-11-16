@@ -8,9 +8,20 @@
 const int16_t kScdAddress = 0x62;
 const uint32_t kInitialTimeMilliSec = 1000;
 const uint32_t kIntervalTimeMilliSec = 5000;
-const uint16_t kBackgroundColor = M5.Lcd.color565(61, 61, 61);
+const uint16_t kBackgroundColor = M5.Lcd.color565(0, 0, 0);
 const uint16_t kTextColor = M5.Lcd.color565(224, 224, 224);
 const uint16_t kTextSize = 2;
+
+const float kThresholdCO2 = 1000.0f;
+const float kThresholdAHLow = 7.0f;
+const float kThresholdAHMid = 11.0f;
+
+struct SensingInformation {
+  float temperature;
+  float co2;
+  float relative_humidity;
+  float absolute_humidity;
+};
 
 void setup() {
   M5.begin(true, true, false);
@@ -57,26 +68,51 @@ void loop() {
     data[counter++] = Wire.read();
   }
 
-  // floating point conversion according to datasheet
-  auto co2 = (float)((uint16_t)data[0] << 8 | data[1]);
+
+  SensingInformation si;
+
   // convert T in degC
-  auto temperature =
+  si.temperature =
       -45 + 175 * (float)((uint16_t)data[3] << 8 | data[4]) / 65536;
+
+  // floating point conversion according to datasheet
+  si.co2 = (float)((uint16_t)data[0] << 8 | data[1]);
+
   // convert RH in %
-  auto relative_humidity = (float)((uint16_t)data[6] << 8 | data[7]) / 65536;
+  si.relative_humidity = (float)((uint16_t)data[6] << 8 | data[7]) / 65536;
 
-  auto e = 6.1078 * std::pow(10, (7.5 * temperature / (temperature + 237.3)));
-  auto a = (217 * e) / (temperature + 273.15);
-  auto absolute_humidity = a * relative_humidity;
+  auto e = 6.1078 * std::pow(10, (7.5 * si.temperature / (si.temperature + 237.3)));
+  auto a = (217 * e) / (si.temperature + 273.15);
+  si.absolute_humidity = a * si.relative_humidity;
 
-  M5.Lcd.setCursor(10, 80);
-  M5.Lcd.printf("CO2[ppm]       : %.1f\n", co2);
-  M5.Lcd.setCursor(10, 100);
-  M5.Lcd.printf("Temperature[C] : %.1f\n", temperature);
-  M5.Lcd.setCursor(10, 120);
-  M5.Lcd.printf("RH[%%]          : %.1f\n", relative_humidity * 100);
-  M5.Lcd.setCursor(10, 140);
-  M5.Lcd.printf("AH[g/m^3]      : %.1f\n", absolute_humidity);
+  Display(si);
 
   delay(kIntervalTimeMilliSec);
 }
+
+void Display(const SensingInformation &si) {
+  M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
+  M5.Lcd.setCursor(10, 80);
+  M5.Lcd.printf("Temperature[C] : %.1f\n", si.temperature);
+
+  if (si.co2 > kThresholdCO2) {
+    M5.Lcd.setTextColor(kTextColor, RED);
+  } else {
+    M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
+  }
+  M5.Lcd.setCursor(10, 100);
+  M5.Lcd.printf("CO2[ppm]       : %.1f\n", si.co2);
+
+  if (si.absolute_humidity < kThresholdAHLow) {
+    M5.Lcd.setTextColor(kTextColor, RED);
+  } else  if (si.absolute_humidity < kThresholdAHMid) {
+    M5.Lcd.setTextColor(BLACK, YELLOW);
+  } else {
+    M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
+  }
+  M5.Lcd.setCursor(10, 120);
+  M5.Lcd.printf("RH[%%]          : %.1f\n", si.relative_humidity * 100);
+  M5.Lcd.setCursor(10, 140);
+  M5.Lcd.printf("AH[g/m^3]      : %.1f\n", si.absolute_humidity);
+}
+
