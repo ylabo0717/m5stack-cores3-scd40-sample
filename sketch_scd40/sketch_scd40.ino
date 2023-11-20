@@ -27,6 +27,12 @@ struct SensingInformation {
   float absolute_humidity;
 };
 
+float CalcTemperature(uint8_t upper, uint8_t lower);
+float CalcCO2(uint8_t upper, uint8_t lower);
+float CalcRelativeHumidity(uint8_t upper, uint8_t lower);
+float CalcAbsoluteHumidity(float temperature, float relative_humidity);
+void Display(const SensingInformation &si);
+
 void setup() {
   M5.begin(true, true, false);
 
@@ -72,26 +78,38 @@ void loop() {
     data[counter++] = Wire.read();
   }
 
-
   SensingInformation si;
-
-  // convert T in degC
-  si.temperature =
-      -45 + 175 * (float)((uint16_t)data[3] << 8 | data[4]) / 65536;
-
-  // floating point conversion according to datasheet
-  si.co2 = (float)((uint16_t)data[0] << 8 | data[1]);
-
-  // convert RH in %
-  si.relative_humidity = (float)((uint16_t)data[6] << 8 | data[7]) / 65536;
-
-  auto e = 6.1078 * std::pow(10, (7.5 * si.temperature / (si.temperature + 237.3)));
-  auto a = (217 * e) / (si.temperature + 273.15);
-  si.absolute_humidity = a * si.relative_humidity;
+  si.temperature = CalcTemperature(data[3], data[4]);
+  si.co2 = CalcCO2(data[0], data[1]);
+  si.relative_humidity = CalcRelativeHumidity(data[6], data[7]);
+  si.absolute_humidity = CalcAbsoluteHumidity(si.temperature, si.relative_humidity);
 
   Display(si);
 
   delay(kIntervalTimeMilliSec);
+}
+
+float CalcTemperature(uint8_t upper, uint8_t lower) {
+  auto temperature =
+      -45 + 175 * (float)((uint16_t)upper << 8 | lower) / 65536;
+  return temperature;
+}
+
+float CalcCO2(uint8_t upper, uint8_t lower) {
+  auto co2 = (float)((uint16_t)upper << 8 | lower);
+  return co2;
+}
+
+float CalcRelativeHumidity(uint8_t upper, uint8_t lower) {
+  auto relative_humidity = (float)((uint16_t)upper << 8 | lower) / 65536;
+  return relative_humidity;
+}
+
+float CalcAbsoluteHumidity(float temperature, float relative_humidity) {
+  auto e = 6.1078 * std::pow(10, (7.5 * temperature / (temperature + 237.3)));
+  auto a = (217 * e) / (temperature + 273.15);
+  auto absolute_humidity = a * relative_humidity;
+  return absolute_humidity;
 }
 
 void Display(const SensingInformation &si) {
