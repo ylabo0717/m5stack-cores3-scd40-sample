@@ -27,9 +27,12 @@ struct SensingInformation {
   float absolute_humidity;
 };
 
-float CalcTemperature(uint8_t upper, uint8_t lower);
-float CalcCO2(uint8_t upper, uint8_t lower);
-float CalcRelativeHumidity(uint8_t upper, uint8_t lower);
+inline uint16_t Byte2Word(uint8_t msb, uint8_t lsb) {
+  return (static_cast<uint16_t>(msb) << 8) | lsb;
+}
+
+float CalcTemperature(uint16_t data);
+float CalcRelativeHumidity(uint16_t data);
 float CalcAbsoluteHumidity(float temperature, float relative_humidity);
 void Display(const SensingInformation &si);
 
@@ -77,11 +80,15 @@ void loop() {
   while (Wire.available()) {
     data[counter++] = Wire.read();
   }
+  uint16_t word[3];
+  word[0] = Byte2Word(data[0], data[1]);
+  word[1] = Byte2Word(data[3], data[4]);
+  word[2] = Byte2Word(data[6], data[7]);
 
   SensingInformation si;
-  si.temperature = CalcTemperature(data[3], data[4]);
-  si.co2 = CalcCO2(data[0], data[1]);
-  si.relative_humidity = CalcRelativeHumidity(data[6], data[7]);
+  si.co2 = word[0];
+  si.temperature = CalcTemperature(word[1]);
+  si.relative_humidity = CalcRelativeHumidity(word[2]);
   si.absolute_humidity = CalcAbsoluteHumidity(si.temperature, si.relative_humidity);
 
   Display(si);
@@ -89,19 +96,14 @@ void loop() {
   delay(kIntervalTimeMilliSec);
 }
 
-float CalcTemperature(uint8_t upper, uint8_t lower) {
+float CalcTemperature(uint16_t data) {
   auto temperature =
-      -45 + 175 * (float)((uint16_t)upper << 8 | lower) / 65536;
+      -45 + 175 * static_cast<float>(data) / 65536;
   return temperature;
 }
 
-float CalcCO2(uint8_t upper, uint8_t lower) {
-  auto co2 = (float)((uint16_t)upper << 8 | lower);
-  return co2;
-}
-
-float CalcRelativeHumidity(uint8_t upper, uint8_t lower) {
-  auto relative_humidity = (float)((uint16_t)upper << 8 | lower) / 65536;
+float CalcRelativeHumidity(uint16_t data) {
+  auto relative_humidity = static_cast<float>(data) / 65536;
   return relative_humidity;
 }
 
