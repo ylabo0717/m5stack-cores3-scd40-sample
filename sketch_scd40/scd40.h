@@ -2,6 +2,8 @@
 #include <M5CoreS3.h>
 #include <Wire.h>
 
+#include <cmath>
+
 class SCD40 {
  public:
   SCD40() {}

@@ -1,8 +1,4 @@
-#include <Arduino.h>
 #include <M5CoreS3.h>
-#include <Wire.h>
-
-#include <cmath>
 
 #include "scd40.h"
 
