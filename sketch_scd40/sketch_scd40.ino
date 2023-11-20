@@ -5,9 +5,6 @@
 #include <cmath>
 
 // Consts
-const int16_t kScdAddress = 0x62;
-const uint32_t kInitialTimeMilliSec = 1000;
-const uint32_t kIntervalTimeMilliSec = 5000;
 const uint16_t kBackgroundColor = BLACK;
 const uint16_t kTextColor = LIGHTGREY;
 const uint16_t kTextSize = 3;
@@ -39,7 +36,7 @@ class SCD40 {
     Wire.endTransmission();
 
     // wait for first measurement to be finished
-    delay(kIntervalTimeMilliSec);
+    Wait();
   }
 
   struct SensingInformation {
@@ -49,6 +46,20 @@ class SCD40 {
     float absolute_humidity;
   };
   void GetSensingInformation(SensingInformation & si) {
+    uint16_t word[3];
+    GetDataFromDevice(word);
+    si.co2 = word[0];
+    si.temperature = CalcTemperature(word[1]);
+    si.relative_humidity = CalcRelativeHumidity(word[2]);
+    si.absolute_humidity = CalcAbsoluteHumidity(si.temperature, si.relative_humidity);
+  }
+
+  void Wait() {
+    delay(kIntervalTimeMilliSec);
+  }
+
+ private:
+  void GetDataFromDevice(uint16_t *word){
     // send read data command
     Wire.beginTransmission(kScdAddress);
     Wire.write(0xec);
@@ -67,18 +78,11 @@ class SCD40 {
     while (Wire.available()) {
       data[counter++] = Wire.read();
     }
-    uint16_t word[3];
     word[0] = Byte2Word(data[0], data[1]);
     word[1] = Byte2Word(data[3], data[4]);
     word[2] = Byte2Word(data[6], data[7]);
-
-    si.co2 = word[0];
-    si.temperature = CalcTemperature(word[1]);
-    si.relative_humidity = CalcRelativeHumidity(word[2]);
-    si.absolute_humidity = CalcAbsoluteHumidity(si.temperature, si.relative_humidity);
   }
 
- private:
   inline uint16_t Byte2Word(uint8_t msb, uint8_t lsb) {
     return (static_cast<uint16_t>(msb) << 8) | lsb;
   }
@@ -100,6 +104,11 @@ class SCD40 {
     auto absolute_humidity = a * relative_humidity;
     return absolute_humidity;
   }
+
+  // Consts.  
+  const int16_t kScdAddress = 0x62;
+  const uint32_t kInitialTimeMilliSec = 1000;
+  const uint32_t kIntervalTimeMilliSec = 5000;
 };
 
 SCD40 scd40_;
@@ -110,7 +119,6 @@ void setup() {
   M5.Lcd.fillScreen(kBackgroundColor);
   M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
   M5.Lcd.setTextSize(kTextSize);
-
   scd40_.Initialize();
 }
 
@@ -118,7 +126,7 @@ void loop() {
   SCD40::SensingInformation si;
   scd40_.GetSensingInformation(si);
   Display(si);
-  delay(kIntervalTimeMilliSec);
+  scd40_.Wait();
 }
 
 void Display(const SCD40::SensingInformation &si) {
