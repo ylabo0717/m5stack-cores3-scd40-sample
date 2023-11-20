@@ -8,9 +8,13 @@
 const int16_t kScdAddress = 0x62;
 const uint32_t kInitialTimeMilliSec = 1000;
 const uint32_t kIntervalTimeMilliSec = 5000;
-const uint16_t kBackgroundColor = M5.Lcd.color565(0, 0, 0);
-const uint16_t kTextColor = M5.Lcd.color565(224, 224, 224);
-const uint16_t kTextSize = 2;
+const uint16_t kBackgroundColor = BLACK;
+const uint16_t kTextColor = LIGHTGREY;
+const uint16_t kTextSize = 3;
+
+const int kDisplayOffsetX = 4;
+const int kDisplayOffsetY = 70;
+const int kDisplayPositionInterval = 30;
 
 const float kThresholdCO2 = 1000.0f;
 const float kThresholdAHLow = 7.0f;
@@ -92,16 +96,19 @@ void loop() {
 
 void Display(const SensingInformation &si) {
   M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
-  M5.Lcd.setCursor(10, 80);
-  M5.Lcd.printf("Temperature[C] : %6.1f\n", si.temperature);
+  int x = kDisplayOffsetX;
+  int y = kDisplayOffsetY;
+  M5.Lcd.setCursor(x, y);
+  M5.Lcd.printf("TEMP[C]  : %6.1f\n", si.temperature);
 
   if (si.co2 > kThresholdCO2) {
     M5.Lcd.setTextColor(kTextColor, RED);
   } else {
     M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
   }
-  M5.Lcd.setCursor(10, 100);
-  M5.Lcd.printf("CO2[ppm]       : %6.1f\n", si.co2);
+  y += kDisplayPositionInterval;
+  M5.Lcd.setCursor(x, y);
+  M5.Lcd.printf("CO2[ppm] : %6.1f\n", si.co2);
 
   if (si.absolute_humidity < kThresholdAHLow) {
     M5.Lcd.setTextColor(kTextColor, RED);
@@ -110,9 +117,12 @@ void Display(const SensingInformation &si) {
   } else {
     M5.Lcd.setTextColor(kTextColor, kBackgroundColor);
   }
-  M5.Lcd.setCursor(10, 120);
-  M5.Lcd.printf("RH[%%]          : %6.1f\n", si.relative_humidity * 100);
-  M5.Lcd.setCursor(10, 140);
-  M5.Lcd.printf("AH[g/m^3]      : %6.1f\n", si.absolute_humidity);
+  y += kDisplayPositionInterval;
+  M5.Lcd.setCursor(x, y);
+  M5.Lcd.printf("RH[%%]    : %6.1f\n", si.relative_humidity * 100);
+
+  y += kDisplayPositionInterval;
+  M5.Lcd.setCursor(x, y);
+  M5.Lcd.printf("AH[g/m^3]: %6.1f\n", si.absolute_humidity);
 }
 
